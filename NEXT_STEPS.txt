@@ -1,37 +1,45 @@
 # ŞİMDİ YAPILACAKLAR (GPU Node'da)
 
-# 1. Conda Environment Aktif Et (opsiyonel - dependencies zaten yüklü)
-source activate semeval
-# veya
-conda activate semeval
+# ============================================
+# HIZLI TEST + TRAINING WORKFLOW (ÖNERİLEN)
+# ============================================
 
-# 2. Dataset İndir (Hugging Face - ÖNERİLEN)
-python download_data.py --source huggingface
+# 1. GPU Node Al
+srun --partition=cuda --qos=cuda --gres=gpu:1 --time=12:00:00 --mem=64G --pty bash
 
-# Alternatif: GitHub'dan
-python download_data.py --source github
+# 2. Proje Dizinine Git
+cd /cta/users/ide.yilmaz/Sem-eval-task-13
 
-# 3. Dataset Kontrol Et
-ls -lh data/
-# Şunları görmeli: train.csv, val.csv (ve opsiyonel test.csv)
+# 3. Hızlı Test (Tüm modelleri 100 sample ile test et)
+python quick_test_models.py --num_samples 100
 
-# 4. Training Başlat
+# 4. Test başarılıysa, Full Training Başlat
+# Seçenek A: Otomatik workflow (test + train)
+bash test_and_train.sh
 
-# Seçenek A: Background (nohup) - ÖNERİLEN
+# Seçenek B: Manuel - Tüm modelleri sırayla eğit
+bash run_all_models_server.sh
+
+# Seçenek C: Tek model eğit
 bash run_training.sh codebert data/train.csv data/val.csv
 
-# Seçenek B: Interactive
-python train.py \
-    --model_name codebert \
-    --train_data data/train.csv \
-    --val_data data/val.csv \
-    --save_every_epoch \
-    --cache_dir ./cache \
-    --log_dir ./logs
-
 # 5. Progress Kontrol (yeni terminal aç)
-tail -f logs/training_codebert_*.out
-tail -f logs/codebert_*.log
+tail -f logs/training_*.out
+tail -f logs/*.log
+
+# ============================================
+# MANUEL ADIMLAR (İstersen)
+# ============================================
+
+# 1. Conda Environment Aktif Et (opsiyonel)
+source activate semeval
+
+# 2. Dataset İndir (eğer yoksa)
+python download_dataset_manual.py
+
+# 3. Dataset Kontrol
+ls -lh data/
 
 # NOT: CUDA uyarısı genelde sorun değil, GPU node'da çalışır.
+# NOT: Training başladıktan sonra bilgisayarını kapatabilirsin!
 
