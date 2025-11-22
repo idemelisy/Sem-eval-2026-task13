@@ -1,0 +1,110 @@
+# SemEval-2026 Task 13 Part A - GPU Training Guide
+
+# ============================================
+# HIZLI BAŞLANGIÇ (Önerilen)
+# ============================================
+
+# 1. GPU Node Al
+srun --partition=cuda --qos=cuda --gres=gpu:1 --time=8:00:00 --mem=64G --pty bash
+
+# 2. Otomatik Setup (Tüm ortamı hazırlar)
+bash setup_gpu.sh
+
+# 3. Dataset'i hazırla (data/ klasörüne koy veya download et)
+
+# 4. Training başlat
+bash run_training.sh codebert data/train.csv data/val.csv
+
+# ============================================
+# MANUEL ADIMLAR (Detaylı)
+# ============================================
+
+# 1. GPU Node Al
+# Önce zaman tahmini yap, sonra uygun süre ile node al
+# Örnek: 5 epoch için yaklaşık 2-4 saat (modele göre değişir)
+srun --partition=cuda --qos=cuda --gres=gpu:1 --time=8:00:00 --mem=64G --pty bash
+
+# 2. Ortamı Yükle
+module load miniconda3/22.11.1-oneapi-2024.0.2-vdx5rot
+module load cuda/10.2.89-gcc-8.5.0-h3fatfr
+# conda activate <your_env>  # Mevcut environment'ı aktif et veya yeni oluştur
+# veya
+conda create -n semeval python=3.10 -y
+conda activate semeval
+
+# 3. Proje Dizinine Git
+cd /cta/users/ide.yilmaz/Sem-eval-task-13
+
+# 4. Dependencies Yükle
+pip install -r requirements.txt
+
+# 5. Dataset'i Hazırla (eğer yoksa)
+# Dataset'i data/ klasörüne koy:
+#   - data/train.csv (veya train.json)
+#   - data/val.csv (veya val.json)
+#   - data/test.csv (veya test.json) [opsiyonel, sadece final evaluation için]
+# 
+# Veya download scriptini kullan:
+# python download_data.py --data_dir data
+
+# 6. (Opsiyonel) Training Zamanı Tahmini
+# Önce bir model için zaman tahmini yap:
+python estimate_time.py \
+    --model_name codebert \
+    --train_data data/train.csv \
+    --val_data data/val.csv \
+    --batch_size 16 \
+    --num_epochs 5
+
+# 7. Training Başlat
+
+# Seçenek A: Tek Model (nohup ile background)
+bash run_training.sh codebert data/train.csv data/val.csv
+
+# Seçenek B: Tek Model (interactive)
+python train.py \
+    --model_name codebert \
+    --train_data data/train.csv \
+    --val_data data/val.csv \
+    --output_dir ./models \
+    --batch_size 16 \
+    --learning_rate 2e-5 \
+    --num_epochs 5 \
+    --max_length 512 \
+    --warmup_steps 500 \
+    --cache_dir ./cache \
+    --log_dir ./logs \
+    --save_every_epoch \
+    --seed 42
+
+# Seçenek C: Tüm Modelleri Sırayla Eğit
+bash run_all_models_server.sh
+
+# 8. Progress Kontrol (nohup kullanıyorsan)
+# Yeni terminal aç ve:
+tail -f logs/training_codebert_*.out
+tail -f logs/codebert_*.log
+
+# 9. Model Kontrol
+# Model kaydedildi mi kontrol et:
+ls -lh models/codebert/best_model/
+ls -lh models/codebert/checkpoint_epoch_*/
+
+# 10. Evaluation (Training bittikten sonra)
+# Validation set üzerinde (training sırasında otomatik yapılıyor)
+# Test set üzerinde final evaluation:
+python evaluate.py \
+    --model_path models/codebert/best_model \
+    --test_data data/test.csv \
+    --output_file results/codebert_results.json \
+    --batch_size 16 \
+    --max_length 512
+
+# NOTLAR:
+# - Training sırasında validation set kullanılıyor (test set değil!)
+# - Her epoch sonunda checkpoint kaydediliyor (--save_every_epoch ile)
+# - Preprocessed data cache'leniyor (ilk run yavaş, sonrakiler hızlı)
+# - Tüm loglar logs/ klasörüne kaydediliyor
+# - Best model models/{model_name}/best_model/ altında
+# - Checkpoint'ler models/{model_name}/checkpoint_epoch_{N}/ altında
+
