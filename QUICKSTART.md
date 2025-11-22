@@ -40,15 +40,29 @@ cd /cta/users/ide.yilmaz/Sem-eval-task-13
 pip install -r requirements.txt
 ```
 
-### Adım 2: Dataset Hazırla
+### Adım 2: Dataset İndir
+
+**Önerilen: Hugging Face (en kolay)**
+```bash
+python download_data.py --source huggingface
+```
+
+**Alternatif: GitHub**
+```bash
+python download_data.py --source github
+```
+
+**Otomatik (önce Hugging Face, sonra GitHub dener)**
+```bash
+python download_data.py
+```
+
+**Manuel:**
 ```bash
 # Dataset'i data/ klasörüne koy:
 # - data/train.csv
 # - data/val.csv
 # - data/test.csv (opsiyonel)
-
-# Veya download scriptini kullan:
-python download_data.py --data_dir data
 ```
 
 ### Adım 3: (Opsiyonel) Zaman Tahmini
