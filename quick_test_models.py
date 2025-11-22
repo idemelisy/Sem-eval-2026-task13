@@ -7,6 +7,7 @@ import torch
 import argparse
 from pathlib import Path
 import pandas as pd
+import os
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from torch.utils.data import DataLoader
 from data_loader import CodeDataset, get_tokenizer
@@ -46,7 +47,8 @@ def quick_test_model(model_name, model_path, train_data, val_data, num_samples=1
         
         # Load tokenizer
         print(f"Loading tokenizer: {model_path}")
-        tokenizer = get_tokenizer(model_path)
+        hf_token = os.environ.get('HF_TOKEN', None)
+        tokenizer = get_tokenizer(model_path, token=hf_token)
         
         # Create datasets
         train_dataset = CodeDataset(train_texts, train_labels, tokenizer, max_length)
@@ -57,10 +59,19 @@ def quick_test_model(model_name, model_path, train_data, val_data, num_samples=1
         
         # Load model
         print(f"Loading model: {model_path}")
+        hf_token = os.environ.get('HF_TOKEN', None)
+        model_kwargs = {
+            'num_labels': 2,
+            'problem_type': "single_label_classification"
+        }
+        if hf_token:
+            model_kwargs['token'] = hf_token
+        if 'starcoder' in model_path.lower():
+            model_kwargs['trust_remote_code'] = True
+        
         model = AutoModelForSequenceClassification.from_pretrained(
             model_path,
-            num_labels=2,
-            problem_type="single_label_classification"
+            **model_kwargs
         )
         model.to(device)
         model.eval()

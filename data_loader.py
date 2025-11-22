@@ -146,10 +146,17 @@ def load_data(data_path, task='A'):
     return texts, labels
 
 
-def get_tokenizer(model_name):
+def get_tokenizer(model_name, token=None):
     """Get appropriate tokenizer for the model"""
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        kwargs = {}
+        if token:
+            kwargs['token'] = token
+        # StarCoder needs trust_remote_code
+        if 'starcoder' in model_name.lower():
+            kwargs['trust_remote_code'] = True
+        
+        tokenizer = AutoTokenizer.from_pretrained(model_name, **kwargs)
         
         # Set pad token if not exists
         if tokenizer.pad_token is None:

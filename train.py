@@ -215,7 +215,9 @@ def main():
     
     # Load tokenizer
     logger.info(f'Loading tokenizer: {model_name}')
-    tokenizer = get_tokenizer(model_name)
+    # Get HF token from environment for gated models like StarCoder
+    hf_token = os.environ.get('HF_TOKEN', None)
+    tokenizer = get_tokenizer(model_name, token=hf_token)
     
     # Create cache directories
     train_cache_dir = os.path.join(args.cache_dir, 'train') if args.cache_dir else None
@@ -237,6 +239,16 @@ def main():
     
     # Load model
     start_epoch = 0
+    hf_token = os.environ.get('HF_TOKEN', None)
+    model_kwargs = {
+        'num_labels': 2,
+        'problem_type': "single_label_classification"
+    }
+    if hf_token:
+        model_kwargs['token'] = hf_token
+    if 'starcoder' in model_name.lower():
+        model_kwargs['trust_remote_code'] = True
+    
     if args.resume_from:
         logger.info(f'Resuming from checkpoint: {args.resume_from}')
         model = AutoModelForSequenceClassification.from_pretrained(args.resume_from)
@@ -250,8 +262,7 @@ def main():
         logger.info(f'Loading model: {model_name}')
         model = AutoModelForSequenceClassification.from_pretrained(
             model_name,
-            num_labels=2,
-            problem_type="single_label_classification"
+            **model_kwargs
         )
     model.to(device)
     

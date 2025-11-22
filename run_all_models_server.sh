@@ -2,6 +2,14 @@
 # Script to train all models on server with proper time allocation
 # Run this after getting a compute node with: srun --partition=cuda --qos=cuda --gres=gpu:1 --time=8:00:00 --mem=64G --pty bash
 
+# Set Hugging Face token for gated models (StarCoder)
+# Token should be set via: export HF_TOKEN="your_token"
+# Or run: bash setup_hf_token.sh your_token
+if [ -z "$HF_TOKEN" ]; then
+    echo "Warning: HF_TOKEN not set. StarCoder training may fail."
+    echo "Set it with: export HF_TOKEN='your_token'"
+fi
+
 # Set paths (update these based on your data location)
 TRAIN_DATA="data/train.csv"
 VAL_DATA="data/val.csv"
