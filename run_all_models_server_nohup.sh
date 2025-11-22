@@ -44,8 +44,12 @@ echo "You can safely close your terminal now!"
 echo ""
 
 # Run all training with nohup
+# Convert array to space-separated string for bash -c
+MODELS_STR="${MODELS[*]}"
+
 nohup bash -c "
-for MODEL in ${MODELS[@]}; do
+MODELS_ARR=($MODELS_STR)
+for MODEL in \"\${MODELS_ARR[@]}\"; do
     echo ''
     echo '=========================================='
     echo \"Training \$MODEL...\"
