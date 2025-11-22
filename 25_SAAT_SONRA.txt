@@ -1,0 +1,76 @@
+# 25 SAAT SONRA KONTROL - SemEval-2026 Task 13
+
+## Training Başladı: 22 Kasım 2025, 23:54
+## Kontrol Zamanı: 23 Kasım 2025, ~00:54 (veya sonrası)
+
+## HIZLI KONTROL (GPU Node'da)
+
+# 1. GPU Node Al (gerekirse)
+srun --partition=cuda --qos=cuda --gres=gpu:1 --time=1:00:00 --mem=64G --pty bash
+
+# 2. Proje Dizinine Git
+cd /cta/users/ide.yilmaz/Sem-eval-task-13
+
+# 3. Sonuçları Kontrol Et
+bash CHECK_RESULTS.sh
+
+# 4. Detaylı Log Kontrol
+tail -100 logs/training_all_models_*.out
+
+# 5. Model Checkpoint'leri
+ls -lh models/*/best_model/
+ls -lh models/*/checkpoint_epoch_*/
+
+# 6. Training History (her model için)
+cat models/distilbert/training_history.json
+cat models/codebert/training_history.json
+# ... diğer modeller
+
+## EĞER TRAINING BİTTİYSE
+
+# Evaluation çalıştır (test set üzerinde)
+python evaluate.py \
+    --model_path models/codebert/best_model \
+    --test_data data/test.csv \
+    --output_file results/codebert_results.json
+
+# Tüm modeller için evaluation
+for model in distilbert codebert graphcodebert codet5 starcoder; do
+    if [ -d "models/$model/best_model" ]; then
+        echo "Evaluating $model..."
+        python evaluate.py \
+            --model_path models/$model/best_model \
+            --test_data data/test.csv \
+            --output_file results/${model}_results.json
+    fi
+done
+
+## EĞER TRAINING HALA ÇALIŞIYORSA
+
+# Progress kontrol
+tail -f logs/training_all_models_*.out
+bash check_progress.sh
+
+# Kalan süre tahmini
+# Log'dan son epoch zamanına bak ve tahmin et
+
+## ÖNEMLİ NOTLAR
+
+- Training nohup ile background'da çalışıyor
+- Her epoch sonunda checkpoint kaydediliyor
+- Best model otomatik kaydediliyor
+- Tüm loglar logs/ klasöründe
+- Model checkpoint'leri models/{model_name}/best_model/ altında
+- Training history: models/{model_name}/training_history.json
+
+## TAHMİNİ SÜRELER (GPU ile)
+
+- distilbert: ~1-2 saat
+- codebert: ~2-4 saat
+- graphcodebert: ~2-4 saat
+- codet5: ~3-6 saat
+- starcoder: ~4-8 saat
+- Toplam: ~12-24 saat
+
+25 saat yeterli, tüm modeller bitmiş olmalı!
+
