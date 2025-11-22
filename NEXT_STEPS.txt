@@ -1,0 +1,37 @@
+# ŞİMDİ YAPILACAKLAR (GPU Node'da)
+
+# 1. Conda Environment Aktif Et (opsiyonel - dependencies zaten yüklü)
+source activate semeval
+# veya
+conda activate semeval
+
+# 2. Dataset İndir (Hugging Face - ÖNERİLEN)
+python download_data.py --source huggingface
+
+# Alternatif: GitHub'dan
+python download_data.py --source github
+
+# 3. Dataset Kontrol Et
+ls -lh data/
+# Şunları görmeli: train.csv, val.csv (ve opsiyonel test.csv)
+
+# 4. Training Başlat
+
+# Seçenek A: Background (nohup) - ÖNERİLEN
+bash run_training.sh codebert data/train.csv data/val.csv
+
+# Seçenek B: Interactive
+python train.py \
+    --model_name codebert \
+    --train_data data/train.csv \
+    --val_data data/val.csv \
+    --save_every_epoch \
+    --cache_dir ./cache \
+    --log_dir ./logs
+
+# 5. Progress Kontrol (yeni terminal aç)
+tail -f logs/training_codebert_*.out
+tail -f logs/codebert_*.log
+
+# NOT: CUDA uyarısı genelde sorun değil, GPU node'da çalışır.
+

@@ -48,20 +48,28 @@ def download_from_huggingface(data_dir='data', task='A'):
     
     # Hugging Face dataset IDs (try multiple possible locations)
     hf_datasets = [
-        "DaniilOr/SemEval-2026-Task13",
-        "mbzuai-nlp/SemEval-2026-Task13",
-        "semeval-2026-task13"
+        ("DaniilOr/SemEval-2026-Task13", task),  # With task config
+        ("DaniilOr/SemEval-2026-Task13", None),  # Without task config
+        ("mbzuai-nlp/SemEval-2026-Task13", task),
+        ("mbzuai-nlp/SemEval-2026-Task13", None),
+        ("semeval-2026-task13", task),
+        ("semeval-2026-task13", None)
     ]
     
     print("Downloading from Hugging Face (recommended method)...")
     
-    for hf_id in hf_datasets:
+    for hf_id, config in hf_datasets:
         try:
-            print(f"Trying: {hf_id}")
-            dataset = load_dataset(hf_id)
+            if config:
+                print(f"Trying: {hf_id} with config '{config}'")
+                dataset = load_dataset(hf_id, config)
+            else:
+                print(f"Trying: {hf_id}")
+                dataset = load_dataset(hf_id)
             
             # Save splits
-            for split_name in ['train', 'validation', 'test']:
+            saved_count = 0
+            for split_name in ['train', 'validation', 'test', 'val']:
                 if split_name in dataset:
                     # Map validation to val
                     output_name = 'val' if split_name == 'validation' else split_name
@@ -69,17 +77,29 @@ def download_from_huggingface(data_dir='data', task='A'):
                     
                     # Convert to DataFrame and save
                     df = dataset[split_name].to_pandas()
-                    df.to_csv(output_file, index=False)
+                    # Use proper CSV escaping for code snippets
+                    df.to_csv(output_file, index=False, escapechar='\\', quoting=1)  # quoting=1 means QUOTE_ALL
                     print(f"✓ Saved {output_name}.csv ({len(df)} samples)")
+                    saved_count += 1
             
-            print(f"\n✓ Successfully downloaded from Hugging Face: {hf_id}")
-            return True
+            if saved_count > 0:
+                print(f"\n✓ Successfully downloaded from Hugging Face: {hf_id}")
+                if config:
+                    print(f"  Used config: {config}")
+                return True
+            else:
+                print(f"  No splits found in dataset")
             
         except Exception as e:
             print(f"  Failed: {e}")
             continue
     
     print("\n✗ Could not download from any Hugging Face location")
+    print("\nTry manually:")
+    print("  from datasets import load_dataset")
+    print(f"  ds = load_dataset('DaniilOr/SemEval-2026-Task13', '{task}')")
+    print("  ds['train'].to_pandas().to_csv('data/train.csv')")
+    print("  ds['validation'].to_pandas().to_csv('data/val.csv')")
     return False
 
 
