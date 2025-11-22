@@ -77,10 +77,13 @@ for MODEL in ${MODELS[@]}; do
 done
 
 echo ''
+echo ''
 echo '=========================================='
 echo 'All models training completed!'
 echo \"End time: \$(date)\"
 echo '=========================================='
+echo ''
+echo 'Training finished. You can now exit the GPU node.'
 " > "$MAIN_LOG" 2>&1 &
 
 PID=$!
