@@ -62,39 +62,56 @@ echo ""
 echo "Starting training in background..."
 bash run_all_models_server_nohup.sh
 
-# Get the PID from nohup output
+# Get the log file (most recent)
 sleep 2
-TRAINING_PID=$(ps aux | grep -E "train.py|run_all_models_server" | grep -v grep | awk '{print $2}' | head -1)
+LATEST_LOG=$(ls -t logs/training_all_models_*.out 2>/dev/null | head -1)
 
-if [ -n "$TRAINING_PID" ]; then
-    echo ""
-    echo "Training started with PID: $TRAINING_PID"
-    echo "Waiting for training to complete..."
-    echo ""
-    
-    # Wait for training to finish
-    while ps -p $TRAINING_PID > /dev/null 2>&1; do
-        sleep 60  # Check every minute
-    done
-    
-    echo ""
-    echo "=========================================="
-    echo "Training completed!"
-    echo "=========================================="
-    echo ""
-    echo "Final check:"
-    bash check_progress.sh
-    echo ""
-    echo "Exiting GPU node..."
-    exit 0
-else
-    echo ""
-    echo "Training started in background!"
-    echo "Check progress with:"
-    echo "  tail -f logs/training_all_models_*.out"
-    echo "  bash check_progress.sh"
-    echo ""
-    echo "Note: Training will continue even if you close this terminal."
-    echo "When training finishes, you can exit manually."
+if [ -z "$LATEST_LOG" ]; then
+    echo "Error: Could not find training log file"
+    exit 1
 fi
+
+echo ""
+echo "Monitoring training log: $LATEST_LOG"
+echo "Waiting for training to complete..."
+echo ""
+
+# Monitor training by checking for train.py processes and log file
+while true; do
+    # Check if train.py is still running
+    if ! pgrep -f "train.py" > /dev/null; then
+        # Check if all models completed by looking at log
+        if grep -q "All models training completed!" "$LATEST_LOG" 2>/dev/null; then
+            echo ""
+            echo "=========================================="
+            echo "Training completed!"
+            echo "=========================================="
+            break
+        fi
+        # If no train.py but log doesn't show completion, wait a bit more
+        sleep 10
+        if ! pgrep -f "train.py" > /dev/null; then
+            # Still no process, check log one more time
+            if grep -q "All models training completed!" "$LATEST_LOG" 2>/dev/null; then
+                echo ""
+                echo "=========================================="
+                echo "Training completed!"
+                echo "=========================================="
+                break
+            else
+                echo "Warning: Training process not found but log doesn't show completion"
+                echo "Check log manually: tail -f $LATEST_LOG"
+                break
+            fi
+        fi
+    fi
+    sleep 60  # Check every minute
+done
+
+echo ""
+echo "Final check:"
+bash check_progress.sh
+echo ""
+echo "Exiting GPU node..."
+exit 0
 
